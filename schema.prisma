@@ -7,13 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/**
- * User — one row per signed-in person.
- *
- * Created automatically on first Google sign-in via NextAuth.
- * The id becomes the foreign key that ties everything else together —
- * calendar credentials, future preferences, request history, etc.
- */
+// User — one row per signed-in person.
+// Created automatically on first Google sign-in via NextAuth.
+// The id becomes the foreign key that ties everything else together —
+// calendar credentials, future preferences, request history, etc.
 model User {
   id                String             @id @default(cuid())
   email             String             @unique
@@ -28,12 +25,8 @@ model User {
   sessions          Session[]
 }
 
-/**
- * GoogleCredential — calendar OAuth tokens, now owned by a User.
- *
- * The previous version had no FK (single-account assumption).
- * Adding userId here is the key schema change that enables multi-user.
- */
+// GoogleCredential — calendar OAuth tokens, scoped to a User.
+// userId FK enables multi-user: each person's tokens are stored separately.
 model GoogleCredential {
   id           String   @id @default(cuid())
   userId       String   @unique
