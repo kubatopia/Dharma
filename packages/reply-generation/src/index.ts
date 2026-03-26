@@ -18,4 +18,4 @@ export function generateReply(slots: TimeSlot[], timezone = "America/New_York"):
   return `Thanks for reaching out! I have the following times available:\n\n${formatted}\n\nPlease let me know what works best for you.`;
 }
 
-export * from "./ai";
+export { generateAIReply, generateConfirmationReply } from "./ai";

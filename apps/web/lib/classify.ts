@@ -31,6 +31,32 @@ function parseJSON<T>(text: string): T | null {
   }
 }
 
+// Maps common timezone abbreviations and city hints to IANA timezone strings.
+// Uses regex rather than a Claude call to keep this fast and free.
+export function detectTimezoneFromText(text: string): string {
+  const t = text.toLowerCase();
+
+  // Explicit abbreviations (check before city names to avoid false positives)
+  if (/\b(et|est|edt|eastern time|eastern)\b/.test(t)) return "America/New_York";
+  if (/\b(ct|cst|cdt|central time|central)\b/.test(t)) return "America/Chicago";
+  if (/\b(mt|mst|mdt|mountain time|mountain)\b/.test(t)) return "America/Denver";
+  if (/\b(pt|pst|pdt|pacific time|pacific)\b/.test(t)) return "America/Los_Angeles";
+  if (/\b(at|ast|adt|atlantic time|atlantic)\b/.test(t)) return "America/Halifax";
+  if (/\b(akt|akst|akdt|alaska)\b/.test(t)) return "America/Anchorage";
+  if (/\b(hst|hawaii)\b/.test(t)) return "Pacific/Honolulu";
+  if (/\b(gmt|utc)\b/.test(t)) return "UTC";
+  if (/\b(bst|london|uk)\b/.test(t)) return "Europe/London";
+  if (/\b(cet|amsterdam|paris|berlin|rome|amsterdam)\b/.test(t)) return "Europe/Paris";
+
+  // City / region hints
+  if (/san francisco|los angeles|seattle|portland|las vegas|san diego/.test(t)) return "America/Los_Angeles";
+  if (/new york|boston|miami|atlanta|philadelphia|toronto|montreal/.test(t)) return "America/New_York";
+  if (/chicago|dallas|houston|minneapolis|austin|new orleans/.test(t)) return "America/Chicago";
+  if (/denver|salt lake|albuquerque|phoenix/.test(t)) return "America/Denver";
+
+  return "America/New_York"; // default — owner is Eastern
+}
+
 export async function classifyEmail(
   subject: string,
   body: string
@@ -51,6 +77,28 @@ export async function classifyEmail(
       durationMinutes: 60,
     }
   );
+}
+
+// If the email proposes a specific meeting time (e.g. "does next tuesday 11AM ET work?"),
+// returns that time so the poller can check it directly instead of suggesting slots.
+export async function extractProposedTime(
+  subject: string,
+  body: string,
+  todayISO: string
+): Promise<{ startISO: string; endISO: string; durationMinutes: number } | null> {
+  const text = await callClaude(
+    `Today is ${todayISO}. Does this email propose a specific meeting time for the recipient to accept or decline?\n\nSubject: ${subject}\nBody:\n${body.slice(0, 600)}\n\nIf YES (a concrete date+time is named), reply JSON:\n{"startISO": "ISO8601 with tz offset", "endISO": "ISO8601 with tz offset", "durationMinutes": 30|60|90}\n\nIf the email only asks for general availability (no specific time given), reply:\n{"startISO": null}\n\nJSON only, no explanation.`,
+    150
+  );
+
+  const parsed = parseJSON<{ startISO: string | null; endISO: string; durationMinutes: number }>(text);
+  if (!parsed?.startISO) return null;
+
+  const start = new Date(parsed.startISO);
+  const end = new Date(parsed.endISO);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+
+  return { startISO: parsed.startISO, endISO: parsed.endISO, durationMinutes: parsed.durationMinutes ?? 30 };
 }
 
 export async function extractConfirmedTime(

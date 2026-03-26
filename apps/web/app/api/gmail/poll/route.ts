@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { getNewMessageIds, getMessage, createDraft } from "../../../../lib/gmail";
-import { classifyEmail, extractConfirmedTime } from "../../../../lib/classify";
+import { classifyEmail, extractConfirmedTime, extractProposedTime, detectTimezoneFromText } from "../../../../lib/classify";
 import { createCalendarEvent } from "../../../../lib/calendar";
 import { getAvailableSlots } from "@dharma/calendar-core";
 import { RealGoogleProvider } from "@dharma/providers-google";
-import { generateReply, generateAIReply } from "@dharma/reply-generation";
+import { generateReply, generateAIReply, generateConfirmationReply } from "@dharma/reply-generation";
 import type { SchedulingRequest } from "@dharma/types";
 
 // Accepts both:
@@ -116,6 +116,11 @@ async function runPoll(req: NextRequest): Promise<NextResponse> {
 
           console.log(`[poll] Scheduling request: "${msg.subject}" from ${msg.from}`);
 
+          // Detect the sender's timezone for display purposes.
+          const senderTimezone = detectTimezoneFromText(`${msg.subject} ${msg.body}`);
+          console.log(`[poll] Sender timezone detected: ${senderTimezone}`);
+
+          const todayISO = new Date().toISOString().slice(0, 10);
           const request: SchedulingRequest = { rawText: msg.body, durationMinutes };
 
           const provider = new RealGoogleProvider(
@@ -133,22 +138,78 @@ async function runPoll(req: NextRequest): Promise<NextResponse> {
             }
           );
 
-          const { slots } = await getAvailableSlots(provider, request);
-          const suggestedSlots = slots.slice(0, 3);
+          // Check if the email proposes a specific time ("does tuesday 11AM ET work?")
+          // If so, check that exact slot rather than finding any open time.
+          const proposed = await extractProposedTime(msg.subject, msg.body, todayISO);
 
           let replyBody: string;
-          if (process.env.ANTHROPIC_API_KEY && msg.body.trim()) {
-            let text = "";
-            try {
-              for await (const chunk of generateAIReply(suggestedSlots, msg.body)) {
-                text += chunk;
+
+          if (proposed) {
+            const proposedStart = new Date(proposed.startISO);
+            const proposedEnd = new Date(proposed.endISO);
+            console.log(`[poll] Specific time proposed: ${proposed.startISO} – ${proposed.endISO}`);
+
+            // Query only the proposed window for conflicts
+            const busyInWindow = await provider.getEvents(proposedStart, proposedEnd);
+            const isConflict = busyInWindow.some(
+              (b) => proposedStart < b.end && proposedEnd > b.start
+            );
+            console.log(`[poll] Proposed slot busy: ${isConflict} (${busyInWindow.length} events in window)`);
+
+            if (!isConflict) {
+              // Confirm the proposed time
+              const slot = { start: proposedStart, end: proposedEnd };
+              if (process.env.ANTHROPIC_API_KEY) {
+                let text = "";
+                try {
+                  for await (const chunk of generateConfirmationReply(slot, msg.body, senderTimezone)) {
+                    text += chunk;
+                  }
+                  replyBody = text;
+                } catch {
+                  replyBody = generateReply([slot], senderTimezone);
+                }
+              } else {
+                replyBody = generateReply([slot], senderTimezone);
               }
-              replyBody = text;
-            } catch {
-              replyBody = generateReply(suggestedSlots);
+            } else {
+              // Proposed time conflicts — suggest alternatives
+              console.log(`[poll] Conflict at proposed time, suggesting alternatives`);
+              const { slots } = await getAvailableSlots(provider, request);
+              const suggestedSlots = slots.slice(0, 3);
+              if (process.env.ANTHROPIC_API_KEY && msg.body.trim()) {
+                let text = "";
+                try {
+                  for await (const chunk of generateAIReply(suggestedSlots, msg.body, senderTimezone)) {
+                    text += chunk;
+                  }
+                  replyBody = text;
+                } catch {
+                  replyBody = generateReply(suggestedSlots, senderTimezone);
+                }
+              } else {
+                replyBody = generateReply(suggestedSlots, senderTimezone);
+              }
             }
           } else {
-            replyBody = generateReply(suggestedSlots);
+            // No specific time proposed — find and suggest open slots
+            const { slots } = await getAvailableSlots(provider, request);
+            const suggestedSlots = slots.slice(0, 3);
+            console.log(`[poll] Suggesting ${suggestedSlots.length} slots`);
+
+            if (process.env.ANTHROPIC_API_KEY && msg.body.trim()) {
+              let text = "";
+              try {
+                for await (const chunk of generateAIReply(suggestedSlots, msg.body, senderTimezone)) {
+                  text += chunk;
+                }
+                replyBody = text;
+              } catch {
+                replyBody = generateReply(suggestedSlots, senderTimezone);
+              }
+            } else {
+              replyBody = generateReply(suggestedSlots, senderTimezone);
+            }
           }
 
           await createDraft(googleCred.accessToken, googleCred.refreshToken, {
