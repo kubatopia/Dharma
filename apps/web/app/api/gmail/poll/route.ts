@@ -8,14 +8,18 @@ import { RealGoogleProvider } from "@dharma/providers-google";
 import { generateReply, generateAIReply } from "@dharma/reply-generation";
 import type { SchedulingRequest } from "@dharma/types";
 
-// Protected by CRON_SECRET so only the poller script (or Vercel Cron) can call it
+// Accepts both:
+//   x-cron-secret header (local poller script)
+//   Authorization: Bearer <secret> header (Vercel Cron)
 function authorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  return req.headers.get("x-cron-secret") === secret;
+  if (req.headers.get("x-cron-secret") === secret) return true;
+  if (req.headers.get("authorization") === `Bearer ${secret}`) return true;
+  return false;
 }
 
-export async function POST(req: NextRequest) {
+async function runPoll(req: NextRequest): Promise<NextResponse> {
   if (!authorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -175,3 +179,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ polled: creds.length, results });
 }
+
+export const GET = runPoll;
+export const POST = runPoll;
