@@ -12,7 +12,7 @@ function LoginContent() {
     <main className="min-h-screen bg-[#0c0c0e] flex items-center justify-center px-6">
       <div className="w-full max-w-sm space-y-10">
         <div className="text-center space-y-3">
-          <div className="text-[#c8f5a0] text-4xl">◈</div>
+          <img src="/logo.png" alt="Dharma Automations" className="w-16 h-16 mx-auto" style={{ filter: "brightness(0) saturate(100%) invert(33%) sepia(96%) saturate(1352%) hue-rotate(252deg) brightness(97%) contrast(101%)" }} />
           <h1 className="text-[1.75rem] font-bold text-white leading-tight">
             Dharma Automations
           </h1>
