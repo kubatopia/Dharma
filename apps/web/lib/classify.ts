@@ -79,26 +79,32 @@ export async function classifyEmail(
   );
 }
 
-// If the email proposes a specific meeting time (e.g. "does next tuesday 11AM ET work?"),
-// returns that time so the poller can check it directly instead of suggesting slots.
-export async function extractProposedTime(
+// Extracts all specific meeting times proposed in an email so the poller can
+// check each one against the calendar (e.g. an EA offering Tu/Wed/Thu slots).
+// Returns null if no concrete times are named (open-ended availability request).
+export async function extractProposedTimes(
   subject: string,
   body: string,
   todayISO: string
-): Promise<{ startISO: string; endISO: string; durationMinutes: number } | null> {
+): Promise<Array<{ startISO: string; endISO: string }> | null> {
   const text = await callClaude(
-    `Today is ${todayISO}. Does this email propose a specific meeting time for the recipient to accept or decline?\n\nSubject: ${subject}\nBody:\n${body.slice(0, 600)}\n\nIf YES (a concrete date+time is named), reply JSON:\n{"startISO": "ISO8601 with tz offset", "endISO": "ISO8601 with tz offset", "durationMinutes": 30|60|90}\n\nIf the email only asks for general availability (no specific time given), reply:\n{"startISO": null}\n\nJSON only, no explanation.`,
-    150
+    `Today is ${todayISO}. Does this email propose one or more specific meeting times for the recipient to choose from?\n\nSubject: ${subject}\nBody:\n${body.slice(0, 800)}\n\nIf YES, return a JSON array of every proposed slot:\n[{"startISO":"ISO8601 with tz offset","endISO":"ISO8601 with tz offset"}, ...]\n\nIf the email only asks when the recipient is free (no specific times given), return: null\n\nJSON only, no explanation.`,
+    400
   );
 
-  const parsed = parseJSON<{ startISO: string | null; endISO: string; durationMinutes: number }>(text);
-  if (!parsed?.startISO) return null;
-
-  const start = new Date(parsed.startISO);
-  const end = new Date(parsed.endISO);
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
-
-  return { startISO: parsed.startISO, endISO: parsed.endISO, durationMinutes: parsed.durationMinutes ?? 30 };
+  const arrMatch = text.match(/\[[\s\S]*\]/);
+  if (!arrMatch) return null;
+  try {
+    const arr = JSON.parse(arrMatch[0]) as Array<{ startISO: string; endISO: string }>;
+    const valid = arr.filter((t) => {
+      const s = new Date(t.startISO);
+      const e = new Date(t.endISO);
+      return !isNaN(s.getTime()) && !isNaN(e.getTime());
+    });
+    return valid.length > 0 ? valid : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function extractConfirmedTime(

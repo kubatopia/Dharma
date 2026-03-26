@@ -71,12 +71,16 @@ Rules:
 export async function* generateAIReply(
   slots: TimeSlot[],
   schedulingRequest: string,
-  timezone = "America/New_York"
+  timezone = "America/New_York",
+  allOfferedTimesBusy = false
 ): AsyncGenerator<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
-  const formattedSlots = slots.map((s) => `• ${formatSlot(s, timezone)}`).join("\n");
+  // Always display the owner's available times in Eastern time so they read
+  // naturally regardless of the sender's timezone.
+  const ownerTimezone = "America/New_York";
+  const formattedSlots = slots.map((s) => `• ${formatSlot(s, ownerTimezone)}`).join("\n");
 
   const systemPrompt = `You write email replies on behalf of the user.
 
@@ -84,11 +88,16 @@ Rules:
 - Write ONLY the email body. No subject line. No "Here is a reply:" preamble.
 - Mirror the tone of the incoming request: casual request → casual reply, formal → formal.
 - Keep it short — 2 to 4 sentences maximum.
-- Include all the available time slots naturally in the text.
+- Include all the available time slots naturally in the text. Times are in ET.
 - End with a friendly call to action (e.g. "let me know what works").
-- Do not sign off with a name — the user will add their own signature.`;
+- Do not sign off with a name — the user will add their own signature.
+- NEVER claim the other person's proposed times "don't work" unless explicitly told they conflict.`;
 
-  const userMessage = `The person sent me this scheduling request:\n\n"${schedulingRequest}"\n\nI'm available at these times:\n${formattedSlots}\n\nWrite a reply.`;
+  const conflict = allOfferedTimesBusy
+    ? "Unfortunately those specific times don't work on my calendar, but"
+    : "Here are some times that work on my end:";
+
+  const userMessage = `The person sent me this scheduling request:\n\n"${schedulingRequest}"\n\n${conflict}\n${formattedSlots}\n\nWrite a reply.`;
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { getNewMessageIds, getMessage, createDraft } from "../../../../lib/gmail";
-import { classifyEmail, extractConfirmedTime, extractProposedTime, detectTimezoneFromText } from "../../../../lib/classify";
+import { classifyEmail, extractConfirmedTime, extractProposedTimes, detectTimezoneFromText } from "../../../../lib/classify";
 import { createCalendarEvent } from "../../../../lib/calendar";
 import { getAvailableSlots } from "@dharma/calendar-core";
 import { RealGoogleProvider } from "@dharma/providers-google";
@@ -138,77 +138,64 @@ async function runPoll(req: NextRequest): Promise<NextResponse> {
             }
           );
 
-          // Check if the email proposes a specific time ("does tuesday 11AM ET work?")
-          // If so, check that exact slot rather than finding any open time.
-          const proposed = await extractProposedTime(msg.subject, msg.body, todayISO);
+          // ── Step 1: check if the email offers specific times ──────────────
+          // e.g. an EA sending "I have Tue 1:30 PM, Wed 3 PM, Thu 4 PM PDT"
+          const proposedTimes = await extractProposedTimes(msg.subject, msg.body, todayISO);
+          console.log(`[poll] Proposed times found: ${proposedTimes?.length ?? 0}`);
 
           let replyBody: string;
+          let confirmedSlot: { start: Date; end: Date } | null = null;
 
-          if (proposed) {
-            const proposedStart = new Date(proposed.startISO);
-            const proposedEnd = new Date(proposed.endISO);
-            console.log(`[poll] Specific time proposed: ${proposed.startISO} – ${proposed.endISO}`);
-
-            // Query only the proposed window for conflicts
-            const busyInWindow = await provider.getEvents(proposedStart, proposedEnd);
-            const isConflict = busyInWindow.some(
-              (b) => proposedStart < b.end && proposedEnd > b.start
-            );
-            console.log(`[poll] Proposed slot busy: ${isConflict} (${busyInWindow.length} events in window)`);
-
-            if (!isConflict) {
-              // Confirm the proposed time
-              const slot = { start: proposedStart, end: proposedEnd };
-              if (process.env.ANTHROPIC_API_KEY) {
-                let text = "";
-                try {
-                  for await (const chunk of generateConfirmationReply(slot, msg.body, senderTimezone)) {
-                    text += chunk;
-                  }
-                  replyBody = text;
-                } catch {
-                  replyBody = generateReply([slot], senderTimezone);
-                }
-              } else {
-                replyBody = generateReply([slot], senderTimezone);
-              }
-            } else {
-              // Proposed time conflicts — suggest alternatives
-              console.log(`[poll] Conflict at proposed time, suggesting alternatives`);
-              const { slots } = await getAvailableSlots(provider, request);
-              const suggestedSlots = slots.slice(0, 3);
-              if (process.env.ANTHROPIC_API_KEY && msg.body.trim()) {
-                let text = "";
-                try {
-                  for await (const chunk of generateAIReply(suggestedSlots, msg.body, senderTimezone)) {
-                    text += chunk;
-                  }
-                  replyBody = text;
-                } catch {
-                  replyBody = generateReply(suggestedSlots, senderTimezone);
-                }
-              } else {
-                replyBody = generateReply(suggestedSlots, senderTimezone);
+          if (proposedTimes && proposedTimes.length > 0) {
+            // Check each offered time — use the first one that's free
+            for (const pt of proposedTimes) {
+              const pStart = new Date(pt.startISO);
+              const pEnd = new Date(pt.endISO);
+              const busy = await provider.getEvents(pStart, pEnd);
+              const hasConflict = busy.some((b) => pStart < b.end && pEnd > b.start);
+              console.log(`[poll] ${pt.startISO}: busy=${hasConflict}`);
+              if (!hasConflict) {
+                confirmedSlot = { start: pStart, end: pEnd };
+                break;
               }
             }
-          } else {
-            // No specific time proposed — find and suggest open slots
-            const { slots } = await getAvailableSlots(provider, request);
-            const suggestedSlots = slots.slice(0, 3);
-            console.log(`[poll] Suggesting ${suggestedSlots.length} slots`);
+          }
 
-            if (process.env.ANTHROPIC_API_KEY && msg.body.trim()) {
+          if (confirmedSlot) {
+            // One of their offered times works — confirm it in their timezone
+            if (process.env.ANTHROPIC_API_KEY) {
               let text = "";
               try {
-                for await (const chunk of generateAIReply(suggestedSlots, msg.body, senderTimezone)) {
+                for await (const chunk of generateConfirmationReply(confirmedSlot, msg.body, senderTimezone)) {
                   text += chunk;
                 }
                 replyBody = text;
               } catch {
-                replyBody = generateReply(suggestedSlots, senderTimezone);
+                replyBody = generateReply([confirmedSlot]);
               }
             } else {
-              replyBody = generateReply(suggestedSlots, senderTimezone);
+              replyBody = generateReply([confirmedSlot]);
+            }
+          } else {
+            // Either no specific times were offered, or all of them conflict.
+            // Find our own available slots and suggest them in ET.
+            const allOfferedTimesBusy = (proposedTimes?.length ?? 0) > 0;
+            const { slots } = await getAvailableSlots(provider, request);
+            const suggestedSlots = slots.slice(0, 3);
+            console.log(`[poll] Suggesting ${suggestedSlots.length} own slots (offeredTimesBusy=${allOfferedTimesBusy})`);
+
+            if (process.env.ANTHROPIC_API_KEY && msg.body.trim()) {
+              let text = "";
+              try {
+                for await (const chunk of generateAIReply(suggestedSlots, msg.body, "America/New_York", allOfferedTimesBusy)) {
+                  text += chunk;
+                }
+                replyBody = text;
+              } catch {
+                replyBody = generateReply(suggestedSlots);
+              }
+            } else {
+              replyBody = generateReply(suggestedSlots);
             }
           }
 
