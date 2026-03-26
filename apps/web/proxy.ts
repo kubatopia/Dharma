@@ -7,7 +7,8 @@ export default auth((req) => {
 
   const isPublic =
     pathname === "/login" ||
-    pathname.startsWith("/api/auth/");
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/gmail/");
 
   if (!isLoggedIn && !isPublic) {
     const loginUrl = new URL("/login", req.url);

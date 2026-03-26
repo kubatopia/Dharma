@@ -1,6 +1,6 @@
 import type { TimeSlot } from "@dharma/types";
 import type { CalendarProvider } from "@dharma/calendar-core";
-import { createDAVClient } from "tsdav";
+import { DAVClient } from "tsdav";
 
 export class AppleCalendarProvider implements CalendarProvider {
   constructor(
@@ -9,7 +9,7 @@ export class AppleCalendarProvider implements CalendarProvider {
   ) {}
 
   async getEvents(start: Date, end: Date): Promise<TimeSlot[]> {
-    const client = await createDAVClient({
+    const client = new DAVClient({
       serverUrl: "https://caldav.icloud.com",
       credentials: {
         username: this.appleId,
@@ -18,6 +18,8 @@ export class AppleCalendarProvider implements CalendarProvider {
       authMethod: "Basic",
       defaultAccountType: "caldav",
     });
+
+    await client.login();
 
     const calendars = await client.fetchCalendars();
     const slots: TimeSlot[] = [];

@@ -17,6 +17,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             "email",
             "profile",
             "https://www.googleapis.com/auth/calendar.readonly",
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/gmail.readonly",
+            "https://www.googleapis.com/auth/gmail.compose",
           ].join(" "),
           access_type: "offline",
           prompt: "consent",
@@ -54,6 +57,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               expiresAt,
             },
           });
+
+          // Set up Gmail watch via dynamic import so googleapis stays out of the Edge bundle
+          if (account.access_token) {
+            const token = account.access_token;
+            const refresh = account.refresh_token ?? "";
+            const uid = dbUser.id;
+            import("./gmail")
+              .then(({ setupGmailWatch }) => setupGmailWatch(uid, token, refresh))
+              .catch((err) => console.error("[auth] Gmail watch setup failed:", err));
+          }
         }
       }
       return true;

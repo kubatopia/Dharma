@@ -24,7 +24,7 @@ export default async function HomePage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-[#c8f5a0] text-2xl">◈</span>
-            <span className="text-white font-bold text-lg">MailMeet</span>
+            <span className="text-white font-bold text-lg">Dharma Automations</span>
           </div>
           <form
             action={async () => {

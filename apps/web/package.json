@@ -12,7 +12,9 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "poll": "node scripts/poller.mjs",
+    "test-poll": "node scripts/test-poll.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",

@@ -30,9 +30,11 @@ model GoogleCredential {
   email        String   @unique
   accessToken  String
   refreshToken String
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  expiresAt        DateTime
+  gmailHistoryId   String?
+  gmailWatchExpiry DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model MicrosoftCredential {
