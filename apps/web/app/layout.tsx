@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Scheduling Copilot",
+  title: "MailMeet",
   description: "Turn scheduling requests into ready-to-send replies.",
 };
 

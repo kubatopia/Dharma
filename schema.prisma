@@ -7,26 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User — one row per signed-in person.
-// Created automatically on first Google sign-in via NextAuth.
-// The id becomes the foreign key that ties everything else together —
-// calendar credentials, future preferences, request history, etc.
 model User {
-  id                String             @id @default(cuid())
-  email             String             @unique
-  name              String?
-  image             String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  googleCredential  GoogleCredential?
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  emailVerified       DateTime?
+  name                String?
+  image               String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  googleCredential    GoogleCredential?
+  microsoftCredential MicrosoftCredential?
+  appleCredential     AppleCredential?
 
-  // NextAuth adapter tables
-  accounts          Account[]
-  sessions          Session[]
+  accounts            Account[]
+  sessions            Session[]
 }
 
-// GoogleCredential — calendar OAuth tokens, scoped to a User.
-// userId FK enables multi-user: each person's tokens are stored separately.
 model GoogleCredential {
   id           String   @id @default(cuid())
   userId       String   @unique
@@ -39,8 +35,31 @@ model GoogleCredential {
   updatedAt    DateTime @updatedAt
 }
 
-// ── NextAuth.js required adapter models ──────────────────────────────────────
-// These are standard — NextAuth reads/writes them automatically.
+model MicrosoftCredential {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email        String
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Apple does not use OAuth — users generate an app-specific password at appleid.apple.com.
+// The password is stored AES-256-GCM encrypted using APPLE_CREDENTIAL_ENCRYPTION_KEY.
+model AppleCredential {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appleId              String
+  encryptedAppPassword String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// ── NextAuth adapter models ───────────────────────────────────────────────────
 
 model Account {
   id                String  @id @default(cuid())

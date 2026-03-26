@@ -1,0 +1,19 @@
+{
+  "name": "@dharma/providers-apple",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dharma/calendar-core": "*",
+    "@dharma/types": "*",
+    "tsdav": "^2.0.11"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "typescript": "^5.7.2"
+  }
+}

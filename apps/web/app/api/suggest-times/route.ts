@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "../../../../lib/auth";
+import { auth } from "../../../lib/auth";
+import { decryptAppPassword } from "../../../lib/apple-crypto";
 import { MockGoogleProvider } from "@dharma/providers-google";
-import { RealGoogleProvider } from "@dharma/providers-google/real";
-import { getAvailableSlots } from "@dharma/calendar-core";
-import { generateReply } from "@dharma/reply-generation";
-import { generateAIReply } from "@dharma/reply-generation/ai";
-import { prisma } from "../../../../lib/prisma";
+import { RealGoogleProvider } from "@dharma/providers-google";
+import { OutlookProvider } from "@dharma/providers-outlook";
+import { AppleCalendarProvider } from "@dharma/providers-apple";
+import { getAvailableSlots, MultiProvider, type CalendarProvider } from "@dharma/calendar-core";
+import { generateReply, generateAIReply } from "@dharma/reply-generation";
+import { prisma } from "../../../lib/prisma";
 import type { SchedulingRequest } from "@dharma/types";
 
 export async function POST(req: NextRequest) {
@@ -14,20 +16,70 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = session.user.id;
   const body = await req.json();
   const request: SchedulingRequest = {
     rawText: body.rawText ?? "",
     durationMinutes: body.durationMinutes ?? 60,
   };
 
-  const credential = await prisma.googleCredential.findUnique({
-    where: { userId: session.user.id },
-  });
+  // Load all credentials in parallel
+  const [googleCred, microsoftCred, appleCred] = await Promise.all([
+    prisma.googleCredential.findUnique({ where: { userId } }),
+    prisma.microsoftCredential.findUnique({ where: { userId } }),
+    prisma.appleCredential.findUnique({ where: { userId } }),
+  ]);
 
-  const provider = credential
-    ? new RealGoogleProvider(credential.email)
-    : new MockGoogleProvider();
-  const isReal = !!credential;
+  const providers: CalendarProvider[] = [];
+
+  if (googleCred) {
+    providers.push(
+      new RealGoogleProvider(
+        googleCred.email,
+        {
+          accessToken: googleCred.accessToken,
+          refreshToken: googleCred.refreshToken,
+          expiresAt: googleCred.expiresAt,
+        },
+        async ({ accessToken, expiresAt }) => {
+          await prisma.googleCredential.update({
+            where: { userId },
+            data: { accessToken, expiresAt },
+          });
+        }
+      )
+    );
+  }
+
+  if (microsoftCred) {
+    providers.push(
+      new OutlookProvider(
+        {
+          accessToken: microsoftCred.accessToken,
+          refreshToken: microsoftCred.refreshToken,
+          expiresAt: microsoftCred.expiresAt,
+        },
+        async ({ accessToken, expiresAt }) => {
+          await prisma.microsoftCredential.update({
+            where: { userId },
+            data: { accessToken, expiresAt },
+          });
+        }
+      )
+    );
+  }
+
+  if (appleCred) {
+    try {
+      const appPassword = decryptAppPassword(appleCred.encryptedAppPassword);
+      providers.push(new AppleCalendarProvider(appleCred.appleId, appPassword));
+    } catch (err) {
+      console.error("[suggest-times] Failed to decrypt Apple credential:", err);
+    }
+  }
+
+  const provider = providers.length > 0 ? new MultiProvider(providers) : new MockGoogleProvider();
+  const isReal = providers.length > 0;
 
   const { slots } = await getAvailableSlots(provider, request);
   const suggestedSlots = slots.slice(0, 3);

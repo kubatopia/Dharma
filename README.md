@@ -1,4 +1,4 @@
-# Dharma — Scheduling Copilot
+# Dharma — MailMeet
 
 Turn scheduling request emails into ready-to-send replies, powered by Google Calendar and Claude AI.
 

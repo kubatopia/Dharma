@@ -18,3 +18,5 @@ export class MockGoogleProvider implements CalendarProvider {
     ];
   }
 }
+
+export { RealGoogleProvider } from "./real";

@@ -14,7 +14,7 @@ function LoginContent() {
         <div className="text-center space-y-3">
           <div className="text-[#c8f5a0] text-4xl">◈</div>
           <h1 className="text-[1.75rem] font-bold text-white leading-tight">
-            Scheduling Copilot
+            MailMeet
           </h1>
           <p className="text-white/40 text-sm leading-relaxed">
             Turn scheduling requests into<br />ready-to-send replies.

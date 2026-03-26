@@ -17,3 +17,5 @@ export function generateReply(slots: TimeSlot[], timezone = "America/New_York"):
   const formatted = slots.map((s) => `• ${formatSlot(s, timezone)}`).join("\n");
   return `Thanks for reaching out! I have the following times available:\n\n${formatted}\n\nPlease let me know what works best for you.`;
 }
+
+export * from "./ai";
