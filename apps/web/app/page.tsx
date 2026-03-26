@@ -23,7 +23,7 @@ export default async function HomePage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Dharma Automations" className="w-8 h-8" style={{ filter: "brightness(0) saturate(100%) invert(33%) sepia(96%) saturate(1352%) hue-rotate(252deg) brightness(97%) contrast(101%)" }} />
+            <img src="/logo.jpg" alt="Dharma Automations" className="w-8 h-8" />
             <span className="text-white font-bold text-lg">Dharma Automations</span>
           </div>
           <form

@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Dharma Automations",
   description: "Turn scheduling requests into ready-to-send replies.",
+  icons: { icon: "/logo.jpg" },
 };
 
 export default function RootLayout({
