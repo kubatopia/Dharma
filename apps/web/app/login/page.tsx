@@ -12,7 +12,7 @@ function LoginContent() {
     <main className="min-h-screen bg-[#0c0c0e] flex items-center justify-center px-6">
       <div className="w-full max-w-sm space-y-10">
         <div className="text-center space-y-3">
-          <img src="/logo.jpg" alt="Dharma Automations" className="w-16 h-16 mx-auto" />
+          <img src="/logo.png" alt="Dharma Automations" className="w-16 h-16 mx-auto" />
           <h1 className="text-[1.75rem] font-bold text-white leading-tight">
             Dharma Automations
           </h1>
