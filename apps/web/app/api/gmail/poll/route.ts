@@ -24,6 +24,22 @@ async function runPoll(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Auto-seed any accounts that connected but whose historyId was never written
+  // (can happen if the Vercel function was killed before setupGmailWatch finished)
+  const unseeded = await prisma.googleCredential.findMany({
+    where: { gmailHistoryId: null },
+  });
+  if (unseeded.length > 0) {
+    const { setupGmailWatch } = await import("../../../../lib/gmail");
+    await Promise.allSettled(
+      unseeded.map((c) =>
+        setupGmailWatch(c.userId, c.accessToken, c.refreshToken).catch((err) =>
+          console.error(`[poll] Failed to seed historyId for ${c.email}:`, err)
+        )
+      )
+    );
+  }
+
   // Find all users with a Gmail watch set up
   const creds = await prisma.googleCredential.findMany({
     where: { gmailHistoryId: { not: null } },

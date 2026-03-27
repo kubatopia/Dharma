@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import { waitUntil } from "@vercel/functions";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
@@ -58,14 +59,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             },
           });
 
-          // Set up Gmail watch via dynamic import so googleapis stays out of the Edge bundle
+          // Seed gmailHistoryId so the poller can start watching this inbox.
+          // Use waitUntil so Vercel keeps the function alive until it finishes —
+          // without this the function is killed as soon as the sign-in response
+          // is sent, leaving gmailHistoryId null and the poller skipping the user.
           if (account.access_token) {
             const token = account.access_token;
             const refresh = account.refresh_token ?? "";
             const uid = dbUser.id;
-            import("./gmail")
-              .then(({ setupGmailWatch }) => setupGmailWatch(uid, token, refresh))
-              .catch((err) => console.error("[auth] Gmail watch setup failed:", err));
+            waitUntil(
+              import("./gmail")
+                .then(({ setupGmailWatch }) => setupGmailWatch(uid, token, refresh))
+                .catch((err) => console.error("[auth] Gmail watch setup failed:", err))
+            );
           }
         }
       }
