@@ -23,13 +23,14 @@
     "@dharma/providers-google": "*",
     "@dharma/providers-outlook": "*",
     "@dharma/reply-generation": "*",
-    "tsdav": "^2.0.11",
     "@dharma/types": "*",
     "@prisma/client": "^5.22.0",
+    "@vercel/functions": "^3.4.3",
     "next": "^16.2.1",
     "next-auth": "^5.0.0-beta.25",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "tsdav": "^2.0.11"
   },
   "devDependencies": {
     "@types/node": "^20.17.10",
