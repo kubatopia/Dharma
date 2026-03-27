@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "../lib/prisma";
 import { signOut } from "../lib/auth";
 import { Suspense } from "react";
+import Image from "next/image";
 import CalendarConnections from "./components/CalendarConnections";
 
 export default async function HomePage() {
@@ -23,7 +24,7 @@ export default async function HomePage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Dharma Automations" className="w-8 h-8" />
+            <Image src="/logo.png" alt="Dharma Automations" width={32} height={32} priority />
             <span className="text-white font-bold text-lg">Dharma Automations</span>
           </div>
           <form
