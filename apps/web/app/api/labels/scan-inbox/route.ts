@@ -21,26 +21,16 @@ export async function POST() {
   if (!googleCred) return NextResponse.json({ error: "Google not connected" }, { status: 400 });
   if (!labels.length) return NextResponse.json({ labeled: 0, scanned: 0 });
 
-  const messages = await listRecentInboxMessages(
-    googleCred.accessToken,
-    googleCred.refreshToken,
-    40
-  );
-
+  const messages = await listRecentInboxMessages(userId, 40);
   let labeled = 0;
 
   for (const msg of messages) {
-    // First try keyword rules
-    const ruleMatches = labels.filter((label) =>
-      label.rules.some((rule) => {
-        const haystack = (() => {
-          switch (rule.field) {
-            case "subject": return msg.subject.toLowerCase();
-            case "from":    return msg.from.toLowerCase();
-            case "body":    return msg.snippet.toLowerCase();
-            default:        return "";
-          }
-        })();
+    // Rule-based matches first
+    const ruleMatches = labels.filter(
+      (label) => label.rules.length > 0 && label.rules.some((rule) => {
+        const haystack = rule.field === "subject" ? msg.subject.toLowerCase()
+          : rule.field === "from" ? msg.from.toLowerCase()
+          : msg.snippet.toLowerCase();
         const needle = rule.value.toLowerCase();
         switch (rule.operator) {
           case "contains":     return haystack.includes(needle);
@@ -52,31 +42,26 @@ export async function POST() {
       })
     );
 
-    // For labels without rules, use AI classification
+    // AI classification for labels without rules
     const labelsWithoutRules = labels.filter(
-      (l) => !ruleMatches.find((m) => m.id === l.id) && l.rules.length === 0
+      (l) => l.rules.length === 0 && !ruleMatches.find((m) => m.id === l.id)
     );
-
     let aiMatches: typeof labels = [];
     if (labelsWithoutRules.length > 0 && process.env.ANTHROPIC_API_KEY) {
-      const aiLabelNames = await classifyEmailLabels(
-        msg.subject,
-        msg.from,
-        msg.snippet,
+      const aiNames = await classifyEmailLabels(
+        msg.subject, msg.from, msg.snippet,
         labelsWithoutRules.map((l) => ({ name: l.name, description: l.description }))
       );
-      aiMatches = labelsWithoutRules.filter((l) => aiLabelNames.includes(l.name));
+      aiMatches = labelsWithoutRules.filter((l) => aiNames.includes(l.name));
     }
 
-    const allMatches = [...ruleMatches, ...aiMatches];
-    const gmailIds = allMatches.map((l) => l.gmailLabelId!);
-
+    const gmailIds = [...ruleMatches, ...aiMatches].map((l) => l.gmailLabelId!);
     if (gmailIds.length > 0) {
       try {
-        await applyGmailLabels(googleCred.accessToken, googleCred.refreshToken, msg.id, gmailIds);
+        await applyGmailLabels(userId, msg.id, gmailIds);
         labeled++;
       } catch (err) {
-        console.error(`[scan-inbox] Failed to label message ${msg.id}:`, err);
+        console.error(`[scan-inbox] Failed to label ${msg.id}:`, err);
       }
     }
   }

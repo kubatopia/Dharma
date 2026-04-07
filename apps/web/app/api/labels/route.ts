@@ -43,14 +43,13 @@ export async function GET() {
       skipDuplicates: true,
     });
 
-    // Create Gmail labels in background if Google is connected
+    // Create Gmail labels if Google is connected (using userId so tokens auto-refresh)
     if (googleCred) {
       const created = await prisma.label.findMany({ where: { userId }, orderBy: { order: "asc" } });
       await Promise.allSettled(
         created.map(async (label, i) => {
           const gmailLabelId = await createGmailLabel(
-            googleCred.accessToken,
-            googleCred.refreshToken,
+            userId,
             `#${label.name}`,
             DEFAULTS[i]?.colorKey ?? "gray"
           );
@@ -82,7 +81,6 @@ export async function POST(req: Request) {
   if (!name?.trim()) return NextResponse.json({ error: "Name required" }, { status: 400 });
 
   const count = await prisma.label.count({ where: { userId } });
-
   const label = await prisma.label.create({
     data: { userId, name: name.trim(), description, color, order: count },
     include: { rules: true },
@@ -91,12 +89,7 @@ export async function POST(req: Request) {
   // Create in Gmail if connected
   const googleCred = await prisma.googleCredential.findUnique({ where: { userId } });
   if (googleCred) {
-    const gmailLabelId = await createGmailLabel(
-      googleCred.accessToken,
-      googleCred.refreshToken,
-      `#${label.name}`,
-      colorKey
-    );
+    const gmailLabelId = await createGmailLabel(userId, `#${label.name}`, colorKey);
     if (gmailLabelId) {
       await prisma.label.update({ where: { id: label.id }, data: { gmailLabelId } });
       return NextResponse.json({ ...label, gmailLabelId });

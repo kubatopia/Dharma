@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
 
         const gmailIds = [...ruleMatches, ...aiMatches].map((l) => l.gmailLabelId!);
         if (gmailIds.length > 0) {
-          await applyGmailLabels(googleCred.accessToken, googleCred.refreshToken, messageId, gmailIds);
+          await applyGmailLabels(googleCred.userId, messageId, gmailIds);
           console.log(`[gmail/webhook] Labeled message ${messageId}:`, gmailIds);
         }
       } catch (err) {

@@ -106,6 +106,12 @@ export default function LabelsPanel() {
     setScanning(true);
     setScanResult(null);
     try {
+      // Ensure all labels exist in Gmail first (fixes missing gmailLabelId)
+      await fetch("/api/labels/setup-gmail", { method: "POST" });
+      // Reload labels so gmailLabelId values are fresh
+      const refreshed = await fetch("/api/labels").then((r) => r.json()) as Label[];
+      setLabels(refreshed);
+      // Now scan and apply
       const res = await fetch("/api/labels/scan-inbox", { method: "POST" });
       const data = await res.json() as { scanned: number; labeled: number };
       setScanResult(data);

@@ -8,6 +8,32 @@ function makeOAuth2Client() {
   );
 }
 
+// Creates an auth client with expiry so the library auto-refreshes stale tokens,
+// and persists new tokens back to the database.
+async function makeAuthForUser(userId: string) {
+  const cred = await prisma.googleCredential.findUnique({ where: { userId } });
+  if (!cred) throw new Error(`No Google credential for user ${userId}`);
+
+  const auth = makeOAuth2Client();
+  auth.setCredentials({
+    access_token: cred.accessToken,
+    refresh_token: cred.refreshToken,
+    expiry_date: cred.expiresAt.getTime(),
+  });
+
+  auth.on("tokens", async (tokens) => {
+    await prisma.googleCredential.update({
+      where: { userId },
+      data: {
+        accessToken: tokens.access_token ?? cred.accessToken,
+        expiresAt: new Date(tokens.expiry_date ?? Date.now() + 3_600_000),
+      },
+    });
+  });
+
+  return { auth, cred };
+}
+
 // Seeds gmailHistoryId from the current Gmail profile so the poller knows
 // where to start. If Pub/Sub is configured, also registers a push watch.
 export async function setupGmailWatch(
@@ -144,25 +170,17 @@ export const GMAIL_COLORS: Record<string, { backgroundColor: string; textColor: 
 };
 
 export async function createGmailLabel(
-  accessToken: string,
-  refreshToken: string,
+  userId: string,
   name: string,
   colorKey: string
 ): Promise<string | null> {
-  const auth = makeOAuth2Client();
-  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
-  const gmail = google.gmail({ version: "v1", auth });
-
-  const color = GMAIL_COLORS[colorKey] ?? GMAIL_COLORS.gray;
   try {
+    const { auth } = await makeAuthForUser(userId);
+    const gmail = google.gmail({ version: "v1", auth });
+    const color = GMAIL_COLORS[colorKey] ?? GMAIL_COLORS.gray;
     const res = await gmail.users.labels.create({
       userId: "me",
-      requestBody: {
-        name,
-        labelListVisibility: "labelShow",
-        messageListVisibility: "show",
-        color,
-      },
+      requestBody: { name, labelListVisibility: "labelShow", messageListVisibility: "show", color },
     });
     return res.data.id ?? null;
   } catch (err) {
@@ -172,17 +190,15 @@ export async function createGmailLabel(
 }
 
 export async function deleteGmailLabel(
-  accessToken: string,
-  refreshToken: string,
+  userId: string,
   gmailLabelId: string
 ): Promise<void> {
-  const auth = makeOAuth2Client();
-  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
-  const gmail = google.gmail({ version: "v1", auth });
   try {
+    const { auth } = await makeAuthForUser(userId);
+    const gmail = google.gmail({ version: "v1", auth });
     await gmail.users.labels.delete({ userId: "me", id: gmailLabelId });
   } catch (err) {
-    console.warn("[gmail] deleteGmailLabel failed (label may already be gone):", err);
+    console.warn("[gmail] deleteGmailLabel failed:", err);
   }
 }
 
@@ -194,12 +210,10 @@ export interface InboxMessage {
 }
 
 export async function listRecentInboxMessages(
-  accessToken: string,
-  refreshToken: string,
+  userId: string,
   maxResults = 30
 ): Promise<InboxMessage[]> {
-  const auth = makeOAuth2Client();
-  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+  const { auth } = await makeAuthForUser(userId);
   const gmail = google.gmail({ version: "v1", auth });
 
   const listRes = await gmail.users.messages.list({
@@ -236,14 +250,12 @@ export async function listRecentInboxMessages(
 }
 
 export async function applyGmailLabels(
-  accessToken: string,
-  refreshToken: string,
+  userId: string,
   messageId: string,
   gmailLabelIds: string[]
 ): Promise<void> {
   if (!gmailLabelIds.length) return;
-  const auth = makeOAuth2Client();
-  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+  const { auth } = await makeAuthForUser(userId);
   const gmail = google.gmail({ version: "v1", auth });
   await gmail.users.messages.modify({
     userId: "me",

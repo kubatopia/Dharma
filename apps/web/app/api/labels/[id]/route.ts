@@ -27,12 +27,8 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   if (!label || label.userId !== session.user.id)
     return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Remove from Gmail if it exists
   if (label.gmailLabelId) {
-    const googleCred = await prisma.googleCredential.findUnique({ where: { userId: label.userId } });
-    if (googleCred) {
-      await deleteGmailLabel(googleCred.accessToken, googleCred.refreshToken, label.gmailLabelId);
-    }
+    await deleteGmailLabel(label.userId, label.gmailLabelId);
   }
 
   await prisma.label.delete({ where: { id } });
