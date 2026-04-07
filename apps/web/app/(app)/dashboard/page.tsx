@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   const userId = session.user.id;
 
   const [user, googleCred, microsoftCred, appleCred] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { schedulingEnabled: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { schedulingEnabled: true, tone: true } }),
     prisma.googleCredential.findUnique({ where: { userId } }),
     prisma.microsoftCredential.findUnique({ where: { userId } }),
     prisma.appleCredential.findUnique({ where: { userId } }),
@@ -26,6 +26,7 @@ export default async function DashboardPage() {
       <Suspense>
         <DashboardWrapper
           schedulingEnabled={user?.schedulingEnabled ?? true}
+          tone={user?.tone ?? ""}
           googleEmail={googleCred?.email}
           microsoft={!!microsoftCred}
           microsoftEmail={microsoftCred?.email}

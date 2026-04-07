@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import LabelsPanel from "./LabelsPanel";
+import InboxPanel from "./InboxPanel";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,7 @@ const TONES: { id: Tone; description: string; example: string }[] = [
 
 interface Props {
   schedulingEnabled: boolean;
+  tone: string;
   googleEmail?: string;
   microsoft: boolean;
   microsoftEmail?: string;
@@ -50,6 +52,7 @@ interface Props {
 
 export default function DashboardWrapper({
   schedulingEnabled: initialSchedulingEnabled,
+  tone: initialTone,
   googleEmail,
   microsoft,
   microsoftEmail,
@@ -61,8 +64,8 @@ export default function DashboardWrapper({
   const params = useSearchParams();
 
   // Feature toggles
-  const [toneEnabled, setToneEnabled] = useState(false);
-  const [selectedTone, setSelectedTone] = useState<Tone | null>(null);
+  const [toneEnabled, setToneEnabled] = useState(!!initialTone);
+  const [selectedTone, setSelectedTone] = useState<Tone | null>((initialTone as Tone) || null);
   const [labelsEnabled, setLabelsEnabled] = useState(false);
   const [schedulingEnabled, setSchedulingEnabled] = useState(initialSchedulingEnabled);
 
@@ -93,6 +96,17 @@ export default function DashboardWrapper({
     const t = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  async function handleToneSelect(tone: Tone | null) {
+    setSelectedTone(tone);
+    if (tone) {
+      await fetch("/api/preferences/tone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tone }),
+      });
+    }
+  }
 
   async function handleSchedulingToggle(enabled: boolean) {
     setSchedulingEnabled(enabled);
@@ -236,7 +250,7 @@ export default function DashboardWrapper({
               <div className="flex flex-wrap gap-2">
                 {TONES.map(({ id }) => (
                   <Tag key={id} label={id} active={selectedTone === id}
-                    onClick={() => setSelectedTone(selectedTone === id ? null : id)} />
+                    onClick={() => handleToneSelect(selectedTone === id ? null : id)} />
                 ))}
               </div>
               {selectedTone && (() => {
@@ -286,6 +300,23 @@ export default function DashboardWrapper({
         </div>
 
       </div>
+
+      {/* ── Inbox panel ── */}
+      <div className="mt-6">
+        <div className="flex items-center justify-between px-1 mb-2">
+          <div>
+            <h2 className="text-sm font-medium text-white">Recent Inbox</h2>
+            <p className="text-xs text-white/30 mt-0.5">
+              Hover an email to draft a reply
+              {selectedTone && <span className="text-white/20"> · tone: {selectedTone}</span>}
+            </p>
+          </div>
+        </div>
+        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl py-1">
+          <InboxPanel selectedTone={selectedTone} />
+        </div>
+      </div>
+
     </div>
   );
 }

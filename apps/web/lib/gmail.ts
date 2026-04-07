@@ -10,7 +10,7 @@ function makeOAuth2Client() {
 
 // Creates an auth client with expiry so the library auto-refreshes stale tokens,
 // and persists new tokens back to the database.
-async function makeAuthForUser(userId: string) {
+export async function makeAuthForUser(userId: string) {
   const cred = await prisma.googleCredential.findUnique({ where: { userId } });
   if (!cred) throw new Error(`No Google credential for user ${userId}`);
 
