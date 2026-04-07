@@ -38,7 +38,6 @@ const TONES: { id: Tone; description: string; example: string }[] = [
 
 interface Props {
   schedulingEnabled: boolean;
-  google: boolean;
   googleEmail?: string;
   microsoft: boolean;
   microsoftEmail?: string;
@@ -51,7 +50,6 @@ interface Props {
 
 export default function DashboardWrapper({
   schedulingEnabled: initialSchedulingEnabled,
-  google,
   googleEmail,
   microsoft,
   microsoftEmail,
@@ -136,22 +134,16 @@ export default function DashboardWrapper({
 
   const calendarProviders = (
     <div className={`transition-opacity ${schedulingEnabled ? "opacity-100" : "opacity-35 pointer-events-none"}`}>
-      {/* Google */}
+      {/* Google — always connected via sign-in */}
       <div className="px-5 py-3.5 flex items-center justify-between gap-4 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
           <GoogleIcon />
           <div>
             <p className="text-sm text-white/80">Google Calendar</p>
-            {google && googleEmail && <p className="text-xs text-white/30 mt-0.5">{googleEmail}</p>}
+            {googleEmail && <p className="text-xs text-white/30 mt-0.5">{googleEmail}</p>}
           </div>
         </div>
-        {google ? (
-          <button onClick={() => disconnect("google")} disabled={calLoading === "google"} className="text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40">
-            {calLoading === "google" ? "…" : "Disconnect"}
-          </button>
-        ) : (
-          <span className="text-xs text-white/20">Sign in with Google</span>
-        )}
+        <span className="text-xs text-[#c8f5a0]/60 bg-[#c8f5a0]/10 px-2 py-0.5 rounded-full">Connected</span>
       </div>
 
       {/* Microsoft */}

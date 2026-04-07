@@ -18,7 +18,7 @@ function LoginContent() {
             Dharma Automations
           </h1>
           <p className="text-white/40 text-sm leading-relaxed">
-            Turn scheduling requests into<br />ready-to-send replies.
+            AI automation for your Gmail inbox —<br />labels, tone, and scheduling.
           </p>
         </div>
 
@@ -26,7 +26,7 @@ function LoginContent() {
           <div className="space-y-1">
             <p className="text-sm text-white/70 font-medium">Sign in to continue</p>
             <p className="text-xs text-white/30 leading-relaxed">
-              We'll ask for read-only calendar access so we can find your free times.
+              Dharma connects to your Gmail and Google Calendar to apply labels, draft replies, and manage scheduling — all from one toggle.
             </p>
           </div>
 
@@ -44,7 +44,7 @@ function LoginContent() {
           </button>
 
           <p className="text-[11px] text-white/20 text-center leading-relaxed">
-            Read-only access. We never create or modify events.
+            Gmail + Calendar access required. You control what's automated.
           </p>
         </div>
       </div>

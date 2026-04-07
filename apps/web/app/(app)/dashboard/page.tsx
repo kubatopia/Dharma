@@ -26,7 +26,6 @@ export default async function DashboardPage() {
       <Suspense>
         <DashboardWrapper
           schedulingEnabled={user?.schedulingEnabled ?? true}
-          google={!!googleCred}
           googleEmail={googleCred?.email}
           microsoft={!!microsoftCred}
           microsoftEmail={microsoftCred?.email}
