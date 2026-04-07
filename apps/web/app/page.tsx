@@ -46,7 +46,7 @@ export default async function HomePage() {
         {/* User */}
         <div className="text-white/40 text-sm">{session.user?.email}</div>
 
-        {/* Dashboard sections */}
+        {/* Dashboard */}
         <Suspense>
           <DashboardWrapper
             schedulingEnabled={user?.schedulingEnabled ?? true}
