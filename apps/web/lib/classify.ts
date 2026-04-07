@@ -57,6 +57,34 @@ export function detectTimezoneFromText(text: string): string {
   return "America/New_York"; // default — owner is Eastern
 }
 
+export async function classifyEmailLabels(
+  subject: string,
+  from: string,
+  body: string,
+  labels: Array<{ name: string; description: string }>
+): Promise<string[]> {
+  if (!labels.length) return [];
+
+  const labelList = labels
+    .map((l) => `- ${l.name}: ${l.description}`)
+    .join("\n");
+
+  const text = await callClaude(
+    `You are an email classifier. Given an email and a list of labels, return which labels apply.\n\nLabels:\n${labelList}\n\nEmail:\nFrom: ${from}\nSubject: ${subject}\nBody:\n${body.slice(0, 600)}\n\nReturn a JSON array of label names that apply (can be empty): ["Label1", "Label2"]\nJSON only, no explanation.`,
+    200
+  );
+
+  const arrMatch = text.match(/\[[\s\S]*?\]/);
+  if (!arrMatch) return [];
+  try {
+    const arr = JSON.parse(arrMatch[0]) as string[];
+    const validNames = new Set(labels.map((l) => l.name));
+    return arr.filter((n) => validNames.has(n));
+  } catch {
+    return [];
+  }
+}
+
 export async function classifyEmail(
   subject: string,
   body: string

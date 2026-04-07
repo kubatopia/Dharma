@@ -52,6 +52,8 @@ export default function LabelsPanel() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<{ scanned: number; labeled: number } | null>(null);
 
   // New label form state
   const [newName, setNewName] = useState("");
@@ -100,6 +102,19 @@ export default function LabelsPanel() {
     );
   }
 
+  async function scanInbox() {
+    setScanning(true);
+    setScanResult(null);
+    try {
+      const res = await fetch("/api/labels/scan-inbox", { method: "POST" });
+      const data = await res.json() as { scanned: number; labeled: number };
+      setScanResult(data);
+    } catch {
+      setScanResult(null);
+    }
+    setScanning(false);
+  }
+
   async function createLabel() {
     if (!newName.trim()) return;
     setCreating(true);
@@ -130,6 +145,27 @@ export default function LabelsPanel() {
 
   return (
     <div className="space-y-2">
+      {/* Scan inbox bar */}
+      <div className="flex items-center justify-between px-1 pb-1">
+        <p className="text-xs text-white/25">Labels apply to new emails automatically</p>
+        <button
+          onClick={scanInbox}
+          disabled={scanning}
+          className="text-xs bg-white/[0.07] hover:bg-white/[0.12] text-white/60 hover:text-white/80 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-40 flex items-center gap-1.5"
+        >
+          {scanning ? (
+            <>
+              <span className="inline-block w-2.5 h-2.5 border border-white/30 border-t-white/70 rounded-full animate-spin" />
+              Scanning…
+            </>
+          ) : "Scan inbox"}
+        </button>
+      </div>
+      {scanResult && (
+        <div className="text-xs text-[#c8f5a0] bg-[#c8f5a0]/10 border border-[#c8f5a0]/20 rounded-xl px-4 py-2 text-center">
+          Scanned {scanResult.scanned} emails — labeled {scanResult.labeled}
+        </div>
+      )}
       {labels.map((label) => (
         <LabelCard
           key={label.id}

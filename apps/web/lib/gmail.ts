@@ -186,6 +186,55 @@ export async function deleteGmailLabel(
   }
 }
 
+export interface InboxMessage {
+  id: string;
+  subject: string;
+  from: string;
+  snippet: string;
+}
+
+export async function listRecentInboxMessages(
+  accessToken: string,
+  refreshToken: string,
+  maxResults = 30
+): Promise<InboxMessage[]> {
+  const auth = makeOAuth2Client();
+  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+  const gmail = google.gmail({ version: "v1", auth });
+
+  const listRes = await gmail.users.messages.list({
+    userId: "me",
+    labelIds: ["INBOX"],
+    maxResults,
+  });
+
+  const ids = (listRes.data.messages ?? []).map((m) => m.id!).filter(Boolean);
+
+  const results = await Promise.allSettled(
+    ids.map(async (id) => {
+      const res = await gmail.users.messages.get({
+        userId: "me",
+        id,
+        format: "metadata",
+        metadataHeaders: ["Subject", "From"],
+      });
+      const headers = res.data.payload?.headers ?? [];
+      const get = (name: string) =>
+        headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value ?? "";
+      return {
+        id,
+        subject: get("Subject"),
+        from: get("From"),
+        snippet: res.data.snippet ?? "",
+      };
+    })
+  );
+
+  return results
+    .filter((r): r is PromiseFulfilledResult<InboxMessage> => r.status === "fulfilled")
+    .map((r) => r.value);
+}
+
 export async function applyGmailLabels(
   accessToken: string,
   refreshToken: string,
