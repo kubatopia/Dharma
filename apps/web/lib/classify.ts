@@ -70,7 +70,14 @@ export async function classifyEmailLabels(
     .join("\n");
 
   const text = await callClaude(
-    `You are an email classifier. Given an email and a list of labels, return which labels apply.\n\nLabels:\n${labelList}\n\nEmail:\nFrom: ${from}\nSubject: ${subject}\nBody:\n${body.slice(0, 600)}\n\nReturn a JSON array of label names that apply (can be empty): ["Label1", "Label2"]\nJSON only, no explanation.`,
+    `You are a strict email classifier. Apply a label ONLY if you are highly confident it is a clear match. When in doubt, do not apply the label — it's better to leave an email unlabeled than to mislabel it.
+
+Do NOT apply labels to:
+- Automated system emails (calendar invites, meeting acceptances, notifications, alerts, CI/CD, GitHub, Vercel, etc.)
+- Email digest or notes summaries (Gemini notes, AI summaries, etc.)
+- Newsletters or marketing emails
+
+Labels:\n${labelList}\n\nEmail:\nFrom: ${from}\nSubject: ${subject}\nBody:\n${body.slice(0, 600)}\n\nReturn a JSON array of label names that clearly apply (usually empty or 1 label, rarely more): ["Label1"]\nJSON only, no explanation.`,
     200
   );
 
