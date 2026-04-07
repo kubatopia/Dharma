@@ -5,6 +5,7 @@ import { signOut } from "../lib/auth";
 import { Suspense } from "react";
 import Image from "next/image";
 import CalendarConnections from "./components/CalendarConnections";
+import DashboardFeatures from "./components/DashboardFeatures";
 
 export default async function HomePage() {
   const session = await auth();
@@ -44,6 +45,12 @@ export default async function HomePage() {
 
         {/* User */}
         <div className="text-white/40 text-sm">{session.user?.email}</div>
+
+        {/* Automation features */}
+        <div className="space-y-3">
+          <p className="text-xs text-white/30 uppercase tracking-widest">Automation Features</p>
+          <DashboardFeatures />
+        </div>
 
         {/* Calendar connections */}
         <div className="space-y-3">
