@@ -4,8 +4,7 @@ import { prisma } from "../lib/prisma";
 import { signOut } from "../lib/auth";
 import { Suspense } from "react";
 import Image from "next/image";
-import CalendarConnections from "./components/CalendarConnections";
-import DashboardFeatures from "./components/DashboardFeatures";
+import DashboardWrapper from "./components/DashboardWrapper";
 
 export default async function HomePage() {
   const session = await auth();
@@ -13,7 +12,8 @@ export default async function HomePage() {
 
   const userId = session.user.id;
 
-  const [googleCred, microsoftCred, appleCred] = await Promise.all([
+  const [user, googleCred, microsoftCred, appleCred] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { schedulingEnabled: true } }),
     prisma.googleCredential.findUnique({ where: { userId } }),
     prisma.microsoftCredential.findUnique({ where: { userId } }),
     prisma.appleCredential.findUnique({ where: { userId } }),
@@ -46,27 +46,19 @@ export default async function HomePage() {
         {/* User */}
         <div className="text-white/40 text-sm">{session.user?.email}</div>
 
-        {/* Automation features */}
-        <div className="space-y-3">
-          <p className="text-xs text-white/30 uppercase tracking-widest">Automation Features</p>
-          <DashboardFeatures />
-        </div>
-
-        {/* Calendar connections */}
-        <div className="space-y-3">
-          <p className="text-xs text-white/30 uppercase tracking-widest">Connected Calendars</p>
-          <Suspense>
-            <CalendarConnections
-              google={!!googleCred}
-              googleEmail={googleCred?.email}
-              microsoft={!!microsoftCred}
-              microsoftEmail={microsoftCred?.email}
-              microsoftConfigured={!!process.env.MICROSOFT_CLIENT_ID}
-              apple={!!appleCred}
-              appleEmail={appleCred?.appleId}
-            />
-          </Suspense>
-        </div>
+        {/* Dashboard sections */}
+        <Suspense>
+          <DashboardWrapper
+            schedulingEnabled={user?.schedulingEnabled ?? true}
+            google={!!googleCred}
+            googleEmail={googleCred?.email}
+            microsoft={!!microsoftCred}
+            microsoftEmail={microsoftCred?.email}
+            microsoftConfigured={!!process.env.MICROSOFT_CLIENT_ID}
+            apple={!!appleCred}
+            appleEmail={appleCred?.appleId}
+          />
+        </Suspense>
       </div>
     </main>
   );

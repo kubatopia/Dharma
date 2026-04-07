@@ -10,12 +10,16 @@ const TONES: Tone[] = ["Professional", "Friendly", "Casual", "Formal", "Concise"
 const LABELS: Label[] = ["Primary", "Work", "Personal", "Updates", "Promotions"];
 const SCHEDULE_TYPES: ScheduleType[] = ["Meetings", "Reminders", "Focus Blocks", "Travel", "Personal"];
 
-export default function DashboardFeatures() {
+interface Props {
+  schedulingEnabled: boolean;
+  onSchedulingChange: (enabled: boolean) => void;
+}
+
+export default function DashboardFeatures({ schedulingEnabled, onSchedulingChange }: Props) {
   const [toneEnabled, setToneEnabled] = useState(false);
   const [selectedTone, setSelectedTone] = useState<Tone | null>(null);
   const [labelsEnabled, setLabelsEnabled] = useState(false);
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
-  const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [selectedScheduleTypes, setSelectedScheduleTypes] = useState<ScheduleType[]>([]);
 
   function toggleScheduleType(type: ScheduleType) {
@@ -95,9 +99,9 @@ export default function DashboardFeatures() {
             <p className="text-sm font-medium text-white">Calendar & Scheduling</p>
             <p className="text-xs text-white/30 mt-0.5">Automate scheduling and calendar events</p>
           </div>
-          <Toggle enabled={scheduleEnabled} onChange={setScheduleEnabled} />
+          <Toggle enabled={schedulingEnabled} onChange={onSchedulingChange} />
         </div>
-        {scheduleEnabled && (
+        {schedulingEnabled && (
           <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.06]">
             {SCHEDULE_TYPES.map((type) => (
               <button
