@@ -5,10 +5,36 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type Tone = "Professional" | "Friendly" | "Casual" | "Formal" | "Concise";
+type Tone = "My Tone" | "Concise" | "Formal / Legal" | "Casual / Friendly";
 type Label = "Primary" | "Work" | "Personal" | "Updates" | "Promotions";
 
-const TONES: Tone[] = ["Professional", "Friendly", "Casual", "Formal", "Concise"];
+const TONES: { id: Tone; description: string; example: string }[] = [
+  {
+    id: "My Tone",
+    description: "Trained on your inbox — mirrors how you write naturally",
+    example:
+      "Hey Sarah,\n\nJust circling back on this one — let me know if there's anything you need from my end before Thursday.\n\nThanks,\nFinley",
+  },
+  {
+    id: "Concise",
+    description: "Brief and direct, no filler",
+    example:
+      "Hi Sarah,\n\nFollowing up on the proposal. Please advise on next steps by Thursday.\n\nThanks,\nFinley",
+  },
+  {
+    id: "Formal / Legal",
+    description: "Structured, precise language for official correspondence",
+    example:
+      "Dear Ms. Smith,\n\nI am writing to follow up regarding the proposal submitted for your review. Please do not hesitate to contact me should you require any additional information or clarification.\n\nSincerely,\nFinley Underwood",
+  },
+  {
+    id: "Casual / Friendly",
+    description: "Warm and conversational for informal threads",
+    example:
+      "Hey Sarah!\n\nJust wanted to check in on the proposal — no rush, but let me know how it's looking when you get a chance!\n\nCheers,\nFinley",
+  },
+];
+
 const LABELS: Label[] = ["Primary", "Work", "Personal", "Updates", "Promotions"];
 
 interface Props {
@@ -124,24 +150,41 @@ export default function DashboardWrapper({
         </div>
       )}
 
-      {/* ── Email Tone ── */}
+      {/* ── Tone ── */}
       <FeatureCard>
         <FeatureRow
-          title="Email Tone"
-          description="Set a consistent writing tone for automated email replies"
+          title="Tone"
+          description="Choose how Dharma sounds when writing on your behalf"
           enabled={toneEnabled}
-          onToggle={setToneEnabled}
+          onToggle={(v) => { setToneEnabled(v); if (!v) setSelectedTone(null); }}
         />
         {toneEnabled && (
-          <div className="px-5 pb-4 flex flex-wrap gap-2">
-            {TONES.map((tone) => (
-              <Tag
-                key={tone}
-                label={tone}
-                active={selectedTone === tone}
-                onClick={() => setSelectedTone(tone === selectedTone ? null : tone)}
-              />
-            ))}
+          <div className="border-t border-white/[0.06] px-5 pt-3 pb-4 space-y-3">
+            {/* Tone selector tags */}
+            <div className="flex flex-wrap gap-2">
+              {TONES.map(({ id }) => (
+                <Tag
+                  key={id}
+                  label={id}
+                  active={selectedTone === id}
+                  onClick={() => setSelectedTone(selectedTone === id ? null : id)}
+                />
+              ))}
+            </div>
+
+            {/* Tone description + example */}
+            {selectedTone && (() => {
+              const tone = TONES.find((t) => t.id === selectedTone)!;
+              return (
+                <div className="rounded-xl bg-white/[0.04] border border-white/[0.07] p-4 space-y-3">
+                  <p className="text-xs text-white/40">{tone.description}</p>
+                  <div className="border-t border-white/[0.06] pt-3">
+                    <p className="text-[10px] text-white/20 uppercase tracking-widest mb-2">Example</p>
+                    <p className="text-xs text-white/60 whitespace-pre-line leading-relaxed">{tone.example}</p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </FeatureCard>
