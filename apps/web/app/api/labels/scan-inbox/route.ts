@@ -21,7 +21,7 @@ export async function POST() {
   if (!googleCred) return NextResponse.json({ error: "Google not connected" }, { status: 400 });
   if (!labels.length) return NextResponse.json({ labeled: 0, scanned: 0 });
 
-  const messages = await listRecentInboxMessages(userId, 40);
+  const messages = await listRecentInboxMessages(userId, 100);
   let labeled = 0;
 
   for (const msg of messages) {

@@ -23,16 +23,15 @@ export async function POST() {
   });
 
   let created = 0;
-  await Promise.allSettled(
-    labels.map(async (label) => {
-      const colorKey = COLOR_MAP[label.name] ?? "gray";
-      const gmailLabelId = await createGmailLabel(userId, `#${label.name}`, colorKey);
-      if (gmailLabelId) {
-        await prisma.label.update({ where: { id: label.id }, data: { gmailLabelId } });
-        created++;
-      }
-    })
-  );
+  // Run sequentially to avoid Gmail API rate limits
+  for (const label of labels) {
+    const colorKey = COLOR_MAP[label.name] ?? "gray";
+    const gmailLabelId = await createGmailLabel(userId, `#${label.name}`, colorKey);
+    if (gmailLabelId) {
+      await prisma.label.update({ where: { id: label.id }, data: { gmailLabelId } });
+      created++;
+    }
+  }
 
   return NextResponse.json({ created });
 }

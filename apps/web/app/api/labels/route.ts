@@ -46,18 +46,14 @@ export async function GET() {
     // Create Gmail labels if Google is connected (using userId so tokens auto-refresh)
     if (googleCred) {
       const created = await prisma.label.findMany({ where: { userId }, orderBy: { order: "asc" } });
-      await Promise.allSettled(
-        created.map(async (label, i) => {
-          const gmailLabelId = await createGmailLabel(
-            userId,
-            `#${label.name}`,
-            DEFAULTS[i]?.colorKey ?? "gray"
-          );
-          if (gmailLabelId) {
-            await prisma.label.update({ where: { id: label.id }, data: { gmailLabelId } });
-          }
-        })
-      );
+      // Run sequentially to avoid Gmail API rate limits
+      for (const label of created) {
+        const colorKey = DEFAULTS.find((d) => d.name === label.name)?.colorKey ?? "gray";
+        const gmailLabelId = await createGmailLabel(userId, `#${label.name}`, colorKey);
+        if (gmailLabelId) {
+          await prisma.label.update({ where: { id: label.id }, data: { gmailLabelId } });
+        }
+      }
     }
 
     labels = await prisma.label.findMany({
