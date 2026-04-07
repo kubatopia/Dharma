@@ -4,15 +4,25 @@ import { useState } from "react";
 
 type Tone = "Professional" | "Friendly" | "Casual" | "Formal" | "Concise";
 type Label = "Primary" | "Work" | "Personal" | "Updates" | "Promotions";
+type ScheduleType = "Meetings" | "Reminders" | "Focus Blocks" | "Travel" | "Personal";
 
 const TONES: Tone[] = ["Professional", "Friendly", "Casual", "Formal", "Concise"];
 const LABELS: Label[] = ["Primary", "Work", "Personal", "Updates", "Promotions"];
+const SCHEDULE_TYPES: ScheduleType[] = ["Meetings", "Reminders", "Focus Blocks", "Travel", "Personal"];
 
 export default function DashboardFeatures() {
   const [toneEnabled, setToneEnabled] = useState(false);
   const [selectedTone, setSelectedTone] = useState<Tone | null>(null);
   const [labelsEnabled, setLabelsEnabled] = useState(false);
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [selectedScheduleTypes, setSelectedScheduleTypes] = useState<ScheduleType[]>([]);
+
+  function toggleScheduleType(type: ScheduleType) {
+    setSelectedScheduleTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  }
 
   function toggleLabel(label: Label) {
     setSelectedLabels((prev) =>
@@ -72,6 +82,34 @@ export default function DashboardFeatures() {
                 }`}
               >
                 {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Calendar & Scheduling */}
+      <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-white">Calendar & Scheduling</p>
+            <p className="text-xs text-white/30 mt-0.5">Automate scheduling and calendar events</p>
+          </div>
+          <Toggle enabled={scheduleEnabled} onChange={setScheduleEnabled} />
+        </div>
+        {scheduleEnabled && (
+          <div className="flex flex-wrap gap-2 pt-3 border-t border-white/[0.06]">
+            {SCHEDULE_TYPES.map((type) => (
+              <button
+                key={type}
+                onClick={() => toggleScheduleType(type)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  selectedScheduleTypes.includes(type)
+                    ? "bg-[#c8f5a0]/15 border-[#c8f5a0]/40 text-[#c8f5a0]"
+                    : "bg-white/[0.05] border-white/[0.1] text-white/50 hover:text-white/70 hover:bg-white/[0.08]"
+                }`}
+              >
+                {type}
               </button>
             ))}
           </div>
