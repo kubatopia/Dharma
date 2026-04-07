@@ -131,6 +131,78 @@ function extractBody(payload: any): string {
   return "";
 }
 
+// Gmail label background colors (must be from Gmail's supported palette)
+export const GMAIL_COLORS: Record<string, { backgroundColor: string; textColor: string }> = {
+  blue:   { backgroundColor: "#4986e7", textColor: "#ffffff" },
+  purple: { backgroundColor: "#a479e2", textColor: "#ffffff" },
+  green:  { backgroundColor: "#16a766", textColor: "#ffffff" },
+  teal:   { backgroundColor: "#2da2bb", textColor: "#ffffff" },
+  yellow: { backgroundColor: "#f2c960", textColor: "#1d1d1d" },
+  orange: { backgroundColor: "#ff7537", textColor: "#ffffff" },
+  red:    { backgroundColor: "#cc3a21", textColor: "#ffffff" },
+  gray:   { backgroundColor: "#999999", textColor: "#ffffff" },
+};
+
+export async function createGmailLabel(
+  accessToken: string,
+  refreshToken: string,
+  name: string,
+  colorKey: string
+): Promise<string | null> {
+  const auth = makeOAuth2Client();
+  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+  const gmail = google.gmail({ version: "v1", auth });
+
+  const color = GMAIL_COLORS[colorKey] ?? GMAIL_COLORS.gray;
+  try {
+    const res = await gmail.users.labels.create({
+      userId: "me",
+      requestBody: {
+        name,
+        labelListVisibility: "labelShow",
+        messageListVisibility: "show",
+        color,
+      },
+    });
+    return res.data.id ?? null;
+  } catch (err) {
+    console.error("[gmail] createGmailLabel failed:", err);
+    return null;
+  }
+}
+
+export async function deleteGmailLabel(
+  accessToken: string,
+  refreshToken: string,
+  gmailLabelId: string
+): Promise<void> {
+  const auth = makeOAuth2Client();
+  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+  const gmail = google.gmail({ version: "v1", auth });
+  try {
+    await gmail.users.labels.delete({ userId: "me", id: gmailLabelId });
+  } catch (err) {
+    console.warn("[gmail] deleteGmailLabel failed (label may already be gone):", err);
+  }
+}
+
+export async function applyGmailLabels(
+  accessToken: string,
+  refreshToken: string,
+  messageId: string,
+  gmailLabelIds: string[]
+): Promise<void> {
+  if (!gmailLabelIds.length) return;
+  const auth = makeOAuth2Client();
+  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
+  const gmail = google.gmail({ version: "v1", auth });
+  await gmail.users.messages.modify({
+    userId: "me",
+    id: messageId,
+    requestBody: { addLabelIds: gmailLabelIds },
+  });
+}
+
 export async function createDraft(
   accessToken: string,
   refreshToken: string,

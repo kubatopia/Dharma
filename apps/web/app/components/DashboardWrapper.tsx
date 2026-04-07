@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import LabelsPanel from "./LabelsPanel";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type Tone = "My Tone" | "Concise" | "Formal / Legal" | "Casual / Friendly";
-type Label = "Primary" | "Work" | "Personal" | "Updates" | "Promotions";
 
 const TONES: { id: Tone; description: string; example: string }[] = [
   {
@@ -67,7 +67,6 @@ export default function DashboardWrapper({
   const [toneEnabled, setToneEnabled] = useState(false);
   const [selectedTone, setSelectedTone] = useState<Tone | null>(null);
   const [labelsEnabled, setLabelsEnabled] = useState(false);
-  const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
   const [schedulingEnabled, setSchedulingEnabled] = useState(initialSchedulingEnabled);
 
   // Calendar state
@@ -134,12 +133,6 @@ export default function DashboardWrapper({
       const data = await res.json() as { error?: string };
       setAppleError(data.error ?? "Connection failed");
     }
-  }
-
-  function toggleLabel(label: Label) {
-    setSelectedLabels((prev) =>
-      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label]
-    );
   }
 
   const calendarProviders = (
@@ -283,15 +276,7 @@ export default function DashboardWrapper({
 
         {/* Labels detail panel */}
         <div>
-          {labelsEnabled && (
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl px-5 py-4 h-full">
-              <div className="flex flex-wrap gap-2">
-                {LABELS.map((label) => (
-                  <Tag key={label} label={label} active={selectedLabels.includes(label)} onClick={() => toggleLabel(label)} />
-                ))}
-              </div>
-            </div>
-          )}
+          {labelsEnabled && <LabelsPanel />}
         </div>
 
         {/* ── Calendar & Scheduling card ── */}

@@ -22,6 +22,7 @@ model User {
 
   accounts            Account[]
   sessions            Session[]
+  labels              Label[]
 }
 
 model GoogleCredential {
@@ -60,6 +61,33 @@ model AppleCredential {
   encryptedAppPassword String
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+model Label {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  description  String      @default("")
+  color        String      @default("#c8f5a0")   // UI chip color
+  gmailLabelId String?                            // Gmail label resource ID
+  enabled      Boolean     @default(true)
+  order        Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  rules        LabelRule[]
+
+  @@unique([userId, name])
+}
+
+model LabelRule {
+  id        String   @id @default(cuid())
+  labelId   String
+  label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  field     String   // "subject" | "from" | "body" | "to"
+  operator  String   // "contains" | "not_contains" | "starts_with" | "is"
+  value     String
+  createdAt DateTime @default(now())
 }
 
 // ── NextAuth adapter models ───────────────────────────────────────────────────
