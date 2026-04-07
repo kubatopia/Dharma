@@ -106,9 +106,11 @@ export default function LabelsPanel() {
     setScanning(true);
     setScanResult(null);
     try {
+      // Seed smart default rules (no-op if rules already exist)
+      await fetch("/api/labels/seed-rules", { method: "POST" });
       // Ensure all labels exist in Gmail first (fixes missing gmailLabelId)
       await fetch("/api/labels/setup-gmail", { method: "POST" });
-      // Reload labels so gmailLabelId values are fresh
+      // Reload labels so gmailLabelId values and new rules are fresh
       const refreshed = await fetch("/api/labels").then((r) => r.json()) as Label[];
       setLabels(refreshed);
       // Now scan and apply
