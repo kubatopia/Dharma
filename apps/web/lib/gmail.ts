@@ -169,6 +169,22 @@ export const GMAIL_COLORS: Record<string, { backgroundColor: string; textColor: 
   gray:   { backgroundColor: "#999999", textColor: "#ffffff" },
 };
 
+export async function listGmailLabels(
+  userId: string
+): Promise<Array<{ id: string; name: string }>> {
+  try {
+    const { auth } = await makeAuthForUser(userId);
+    const gmail = google.gmail({ version: "v1", auth });
+    const res = await gmail.users.labels.list({ userId: "me" });
+    return (res.data.labels ?? [])
+      .filter((l) => l.id && l.name)
+      .map((l) => ({ id: l.id!, name: l.name! }));
+  } catch (err) {
+    console.error("[gmail] listGmailLabels failed:", err);
+    return [];
+  }
+}
+
 export async function createGmailLabel(
   userId: string,
   name: string,

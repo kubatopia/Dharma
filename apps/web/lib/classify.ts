@@ -70,14 +70,18 @@ export async function classifyEmailLabels(
     .join("\n");
 
   const text = await callClaude(
-    `You are a strict email classifier. Apply a label ONLY if you are highly confident it is a clear match. When in doubt, do not apply the label — it's better to leave an email unlabeled than to mislabel it.
+    `You are an email classifier for a business professional. Label emails from real people about real business situations. Be confident when the match is clear.
 
-Do NOT apply labels to:
-- Automated system emails (calendar invites, meeting acceptances, notifications, alerts, CI/CD, GitHub, Vercel, etc.)
-- Email digest or notes summaries (Gemini notes, AI summaries, etc.)
-- Newsletters or marketing emails
+SKIP labeling entirely (return []) for:
+- GitHub, Vercel, Jira, Linear, Slack, or any developer tool notifications
+- Google Calendar invites, acceptances, or meeting updates
+- Gemini, AI digest, or automated summary emails
+- Newsletters, marketing, or bulk mail
+- Any no-reply or automated sender
 
-Labels:\n${labelList}\n\nEmail:\nFrom: ${from}\nSubject: ${subject}\nBody:\n${body.slice(0, 600)}\n\nReturn a JSON array of label names that clearly apply (usually empty or 1 label, rarely more): ["Label1"]\nJSON only, no explanation.`,
+For real human emails, apply labels that clearly fit. It's fine to apply 1-2 labels when confident.
+
+Labels:\n${labelList}\n\nEmail:\nFrom: ${from}\nSubject: ${subject}\nBody:\n${body.slice(0, 600)}\n\nReturn a JSON array of matching label names ([] if automated or no clear match): ["Label1"]\nJSON only, no explanation.`,
     200
   );
 
