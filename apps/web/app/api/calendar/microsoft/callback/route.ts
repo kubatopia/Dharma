@@ -24,11 +24,11 @@ export async function GET(req: NextRequest) {
   const error = searchParams.get("error");
 
   if (error) {
-    return NextResponse.redirect(`${base}/?error=microsoft_denied`);
+    return NextResponse.redirect(`${base}/dashboard?error=microsoft_denied`);
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${base}/?error=microsoft_invalid`);
+    return NextResponse.redirect(`${base}/dashboard?error=microsoft_invalid`);
   }
 
   // Verify CSRF state
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
   cookieStore.delete("ms_oauth_state");
 
   if (!savedState || savedState !== state) {
-    return NextResponse.redirect(`${base}/?error=microsoft_state`);
+    return NextResponse.redirect(`${base}/dashboard?error=microsoft_state`);
   }
 
   // Require authenticated session to know which user to attach the credential to
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 
   if (!tokenRes.ok) {
     console.error("[ms/callback] Token exchange failed:", await tokenRes.text());
-    return NextResponse.redirect(`${base}/?error=microsoft_token`);
+    return NextResponse.redirect(`${base}/dashboard?error=microsoft_token`);
   }
 
   const tokens = await tokenRes.json() as TokenResponse;
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!meRes.ok) {
-    return NextResponse.redirect(`${base}/?error=microsoft_profile`);
+    return NextResponse.redirect(`${base}/dashboard?error=microsoft_profile`);
   }
 
   const me = await meRes.json() as GraphUser;
@@ -99,5 +99,5 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.redirect(`${base}/?connected=microsoft`);
+  return NextResponse.redirect(`${base}/dashboard?connected=microsoft`);
 }

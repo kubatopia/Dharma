@@ -83,12 +83,12 @@ export default function DashboardWrapper({
     const connected = params.get("connected");
     if (connected === "microsoft") {
       setToast("Outlook Calendar connected");
-      router.replace("/");
+      router.replace("/dashboard");
     }
     const errorParam = params.get("error");
     if (errorParam?.startsWith("microsoft")) {
       setToast("Could not connect Outlook — please try again");
-      router.replace("/");
+      router.replace("/dashboard");
     }
   }, [params, router]);
 
