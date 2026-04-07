@@ -142,215 +142,174 @@ export default function DashboardWrapper({
     );
   }
 
+  const calendarProviders = (
+    <div className={`transition-opacity ${schedulingEnabled ? "opacity-100" : "opacity-35 pointer-events-none"}`}>
+      {/* Google */}
+      <div className="px-5 py-3.5 flex items-center justify-between gap-4 border-b border-white/[0.06]">
+        <div className="flex items-center gap-3">
+          <GoogleIcon />
+          <div>
+            <p className="text-sm text-white/80">Google Calendar</p>
+            {google && googleEmail && <p className="text-xs text-white/30 mt-0.5">{googleEmail}</p>}
+          </div>
+        </div>
+        {google ? (
+          <button onClick={() => disconnect("google")} disabled={calLoading === "google"} className="text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40">
+            {calLoading === "google" ? "…" : "Disconnect"}
+          </button>
+        ) : (
+          <span className="text-xs text-white/20">Sign in with Google</span>
+        )}
+      </div>
+
+      {/* Microsoft */}
+      <div className="px-5 py-3.5 flex items-center justify-between gap-4 border-b border-white/[0.06]">
+        <div className="flex items-center gap-3">
+          <MicrosoftIcon />
+          <div>
+            <p className="text-sm text-white/80">Outlook / Microsoft 365</p>
+            {microsoft && microsoftEmail && <p className="text-xs text-white/30 mt-0.5">{microsoftEmail}</p>}
+          </div>
+        </div>
+        {microsoft ? (
+          <button onClick={() => disconnect("microsoft")} disabled={calLoading === "microsoft"} className="text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40">
+            {calLoading === "microsoft" ? "…" : "Disconnect"}
+          </button>
+        ) : microsoftConfigured ? (
+          <a href="/api/calendar/microsoft/connect" className="text-xs bg-white/[0.08] hover:bg-white/[0.12] text-white/60 px-3 py-1.5 rounded-lg transition-colors">Connect →</a>
+        ) : (
+          <span className="text-xs text-white/20 italic">Coming soon</span>
+        )}
+      </div>
+
+      {/* Apple */}
+      <div className="px-5 py-3.5 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AppleIcon />
+            <div>
+              <p className="text-sm text-white/80">Apple iCloud Calendar</p>
+              {apple && appleEmail && <p className="text-xs text-white/30 mt-0.5">{appleEmail}</p>}
+            </div>
+          </div>
+          {apple ? (
+            <button onClick={() => disconnect("apple")} disabled={calLoading === "apple"} className="text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40">
+              {calLoading === "apple" ? "…" : "Disconnect"}
+            </button>
+          ) : (
+            <button onClick={() => setShowAppleForm((v) => !v)} className="text-xs bg-white/[0.08] hover:bg-white/[0.12] text-white/60 px-3 py-1.5 rounded-lg transition-colors">
+              {showAppleForm ? "Cancel" : "Connect →"}
+            </button>
+          )}
+        </div>
+        {showAppleForm && !apple && (
+          <form onSubmit={connectApple} className="space-y-3 pt-1 border-t border-white/[0.06]">
+            <p className="text-xs text-white/30 leading-relaxed">
+              Enter your Apple ID and an{" "}
+              <a href="https://support.apple.com/102654" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white/50">app-specific password</a>
+              . Stored encrypted.
+            </p>
+            <input type="email" placeholder="Apple ID (e.g. you@icloud.com)" value={appleId} onChange={(e) => setAppleId(e.target.value)} required
+              className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/20" />
+            <input type="password" placeholder="App-specific password (xxxx-xxxx-xxxx-xxxx)" value={appPassword} onChange={(e) => setAppPassword(e.target.value)} required
+              className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/20" />
+            {appleError && <p className="text-xs text-red-400">{appleError}</p>}
+            <button type="submit" disabled={calLoading === "apple"}
+              className="w-full bg-white text-[#1a1a1a] font-medium text-sm py-2.5 rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50">
+              {calLoading === "apple" ? "Connecting…" : "Connect Apple Calendar"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-3">
+    <div>
       {toast && (
-        <div className="text-xs text-[#c8f5a0] bg-[#c8f5a0]/10 border border-[#c8f5a0]/20 rounded-xl px-4 py-2 text-center">
+        <div className="text-xs text-[#c8f5a0] bg-[#c8f5a0]/10 border border-[#c8f5a0]/20 rounded-xl px-4 py-2 text-center mb-3">
           {toast}
         </div>
       )}
 
-      {/* ── Tone ── */}
-      <FeatureCard>
-        <FeatureRow
-          title="Tone"
-          description="Choose how Dharma sounds when writing on your behalf"
-          enabled={toneEnabled}
-          onToggle={(v) => { setToneEnabled(v); if (!v) setSelectedTone(null); }}
-        />
-        {toneEnabled && (
-          <div className="border-t border-white/[0.06] px-5 pt-3 pb-4 space-y-3">
-            {/* Tone selector tags */}
-            <div className="flex flex-wrap gap-2">
-              {TONES.map(({ id }) => (
-                <Tag
-                  key={id}
-                  label={id}
-                  active={selectedTone === id}
-                  onClick={() => setSelectedTone(selectedTone === id ? null : id)}
-                />
-              ))}
-            </div>
+      {/* Two-column grid: feature cards left, detail panels right */}
+      <div className="grid gap-3" style={{ gridTemplateColumns: "360px 1fr" }}>
 
-            {/* Tone description + example */}
-            {selectedTone && (() => {
-              const tone = TONES.find((t) => t.id === selectedTone)!;
-              return (
-                <div className="rounded-xl bg-white/[0.04] border border-white/[0.07] p-4 space-y-3">
-                  <p className="text-xs text-white/40">{tone.description}</p>
-                  <div className="border-t border-white/[0.06] pt-3">
-                    <p className="text-[10px] text-white/20 uppercase tracking-widest mb-2">Example</p>
-                    <p className="text-xs text-white/60 whitespace-pre-line leading-relaxed">{tone.example}</p>
+        {/* ── Tone card ── */}
+        <FeatureCard>
+          <FeatureRow
+            title="Tone"
+            description="Choose how Dharma sounds when writing on your behalf"
+            enabled={toneEnabled}
+            onToggle={(v) => { setToneEnabled(v); if (!v) setSelectedTone(null); }}
+          />
+        </FeatureCard>
+
+        {/* Tone detail panel */}
+        <div>
+          {toneEnabled && (
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl px-5 py-4 space-y-3 h-full">
+              <div className="flex flex-wrap gap-2">
+                {TONES.map(({ id }) => (
+                  <Tag key={id} label={id} active={selectedTone === id}
+                    onClick={() => setSelectedTone(selectedTone === id ? null : id)} />
+                ))}
+              </div>
+              {selectedTone && (() => {
+                const tone = TONES.find((t) => t.id === selectedTone)!;
+                return (
+                  <div className="rounded-xl bg-white/[0.04] border border-white/[0.07] p-4 space-y-3">
+                    <p className="text-xs text-white/40">{tone.description}</p>
+                    <div className="border-t border-white/[0.06] pt-3">
+                      <p className="text-[10px] text-white/20 uppercase tracking-widest mb-2">Example</p>
+                      <p className="text-xs text-white/60 whitespace-pre-line leading-relaxed">{tone.example}</p>
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
-      </FeatureCard>
-
-      {/* ── Tabs & Labels ── */}
-      <FeatureCard>
-        <FeatureRow
-          title="Tabs & Labels"
-          description="Automatically sort and label incoming emails by category"
-          enabled={labelsEnabled}
-          onToggle={setLabelsEnabled}
-        />
-        {labelsEnabled && (
-          <div className="px-5 pb-4 flex flex-wrap gap-2">
-            {LABELS.map((label) => (
-              <Tag
-                key={label}
-                label={label}
-                active={selectedLabels.includes(label)}
-                onClick={() => toggleLabel(label)}
-              />
-            ))}
-          </div>
-        )}
-      </FeatureCard>
-
-      {/* ── Calendar & Scheduling ── */}
-      <FeatureCard>
-        <FeatureRow
-          title="Calendar & Scheduling"
-          description="Detect scheduling requests and send calendar invites automatically"
-          enabled={schedulingEnabled}
-          onToggle={handleSchedulingToggle}
-        />
-
-        {/* Calendar providers */}
-        <div className={`transition-opacity ${schedulingEnabled ? "opacity-100" : "opacity-35 pointer-events-none"}`}>
-
-          {/* Google */}
-          <div className="border-t border-white/[0.06] px-5 py-3.5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <GoogleIcon />
-              <div>
-                <p className="text-sm text-white/80">Google Calendar</p>
-                {google && googleEmail && (
-                  <p className="text-xs text-white/30 mt-0.5">{googleEmail}</p>
-                )}
-              </div>
+                );
+              })()}
             </div>
-            {google ? (
-              <button
-                onClick={() => disconnect("google")}
-                disabled={calLoading === "google"}
-                className="text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40"
-              >
-                {calLoading === "google" ? "…" : "Disconnect"}
-              </button>
-            ) : (
-              <span className="text-xs text-white/20">Sign in with Google to connect</span>
-            )}
-          </div>
-
-          {/* Microsoft */}
-          <div className="border-t border-white/[0.06] px-5 py-3.5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <MicrosoftIcon />
-              <div>
-                <p className="text-sm text-white/80">Outlook / Microsoft 365</p>
-                {microsoft && microsoftEmail && (
-                  <p className="text-xs text-white/30 mt-0.5">{microsoftEmail}</p>
-                )}
-              </div>
-            </div>
-            {microsoft ? (
-              <button
-                onClick={() => disconnect("microsoft")}
-                disabled={calLoading === "microsoft"}
-                className="text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40"
-              >
-                {calLoading === "microsoft" ? "…" : "Disconnect"}
-              </button>
-            ) : microsoftConfigured ? (
-              <a
-                href="/api/calendar/microsoft/connect"
-                className="text-xs bg-white/[0.08] hover:bg-white/[0.12] text-white/60 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                Connect →
-              </a>
-            ) : (
-              <span className="text-xs text-white/20 italic">Coming soon</span>
-            )}
-          </div>
-
-          {/* Apple */}
-          <div className="border-t border-white/[0.06] px-5 py-3.5 space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <AppleIcon />
-                <div>
-                  <p className="text-sm text-white/80">Apple iCloud Calendar</p>
-                  {apple && appleEmail && (
-                    <p className="text-xs text-white/30 mt-0.5">{appleEmail}</p>
-                  )}
-                </div>
-              </div>
-              {apple ? (
-                <button
-                  onClick={() => disconnect("apple")}
-                  disabled={calLoading === "apple"}
-                  className="text-xs text-white/30 hover:text-white/60 transition-colors disabled:opacity-40"
-                >
-                  {calLoading === "apple" ? "…" : "Disconnect"}
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowAppleForm((v) => !v)}
-                  className="text-xs bg-white/[0.08] hover:bg-white/[0.12] text-white/60 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  {showAppleForm ? "Cancel" : "Connect →"}
-                </button>
-              )}
-            </div>
-
-            {showAppleForm && !apple && (
-              <form onSubmit={connectApple} className="space-y-3 pt-1 border-t border-white/[0.06]">
-                <p className="text-xs text-white/30 leading-relaxed">
-                  Enter your Apple ID and an{" "}
-                  <a
-                    href="https://support.apple.com/102654"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-2 hover:text-white/50"
-                  >
-                    app-specific password
-                  </a>
-                  . Stored encrypted.
-                </p>
-                <input
-                  type="email"
-                  placeholder="Apple ID (e.g. you@icloud.com)"
-                  value={appleId}
-                  onChange={(e) => setAppleId(e.target.value)}
-                  required
-                  className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/20"
-                />
-                <input
-                  type="password"
-                  placeholder="App-specific password (xxxx-xxxx-xxxx-xxxx)"
-                  value={appPassword}
-                  onChange={(e) => setAppPassword(e.target.value)}
-                  required
-                  className="w-full bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/20"
-                />
-                {appleError && <p className="text-xs text-red-400">{appleError}</p>}
-                <button
-                  type="submit"
-                  disabled={calLoading === "apple"}
-                  className="w-full bg-white text-[#1a1a1a] font-medium text-sm py-2.5 rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50"
-                >
-                  {calLoading === "apple" ? "Connecting…" : "Connect Apple Calendar"}
-                </button>
-              </form>
-            )}
-          </div>
+          )}
         </div>
-      </FeatureCard>
+
+        {/* ── Tabs & Labels card ── */}
+        <FeatureCard>
+          <FeatureRow
+            title="Tabs & Labels"
+            description="Automatically sort and label incoming emails by category"
+            enabled={labelsEnabled}
+            onToggle={setLabelsEnabled}
+          />
+        </FeatureCard>
+
+        {/* Labels detail panel */}
+        <div>
+          {labelsEnabled && (
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl px-5 py-4 h-full">
+              <div className="flex flex-wrap gap-2">
+                {LABELS.map((label) => (
+                  <Tag key={label} label={label} active={selectedLabels.includes(label)} onClick={() => toggleLabel(label)} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Calendar & Scheduling card ── */}
+        <FeatureCard>
+          <FeatureRow
+            title="Calendar & Scheduling"
+            description="Detect scheduling requests and send calendar invites automatically"
+            enabled={schedulingEnabled}
+            onToggle={handleSchedulingToggle}
+          />
+        </FeatureCard>
+
+        {/* Calendar providers panel — always visible */}
+        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl overflow-hidden">
+          {calendarProviders}
+        </div>
+
+      </div>
     </div>
   );
 }

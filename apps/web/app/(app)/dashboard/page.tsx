@@ -18,7 +18,7 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-lg font-semibold text-white">Dashboard</h1>
         <p className="text-sm text-white/35 mt-0.5">Manage your active automations</p>
