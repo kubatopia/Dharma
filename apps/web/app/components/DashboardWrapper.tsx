@@ -35,7 +35,6 @@ const TONES: { id: Tone; description: string; example: string }[] = [
   },
 ];
 
-const LABELS: Label[] = ["Primary", "Work", "Personal", "Updates", "Promotions"];
 
 interface Props {
   schedulingEnabled: boolean;
